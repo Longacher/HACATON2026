@@ -39,7 +39,7 @@ export default function Shell({ children }: { children: ReactNode }) {
     <div className="otklik-page" style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "248px 1fr" }}>
       <aside style={{ background: "rgba(255,253,248,.92)", backdropFilter: "blur(12px)", borderRight: "1px solid var(--line)", padding: 16, display: "flex", flexDirection: "column", gap: 4, position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 13, background: "linear-gradient(135deg,#2e7d7b,#7fb69e)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Lora,serif", fontWeight: 700, fontSize: 19 }}>О</div>
+          <img src="/favicon.png" alt="Логотип Отклика" width={38} height={38} style={{ borderRadius: 13, display: "block" }} />
           <div><div className="serif" style={{ fontWeight: 700, fontSize: 16 }}>Отклик</div><div style={{ fontSize: 11.5, color: "var(--muted)" }}>команда заботы</div></div>
         </div>
 

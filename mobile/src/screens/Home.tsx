@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, Animated, Easing } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, Animated, Easing, Image } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -87,7 +87,7 @@ export default function Home({ navigation }: Props) {
         <FadeIn>
           <View style={st.hero}>
             <View style={st.logoRow}>
-              <View style={st.logo}><Text style={st.logoText}>О</Text></View>
+              <Image source={require("../../assets/icon.png")} style={st.logo} accessibilityLabel="Логотип Отклика" />
               <View style={st.safeBadge}><Text style={st.safeBadgeText}>Анонимно · безопасно</Text></View>
               <Pressable style={st.schemeBtn} onPress={toggle} accessibilityRole="button" accessibilityLabel={scheme === "night" ? "Включить дневной режим" : "Включить ночной режим"}>
                 {scheme === "night" ? <SunIcon color={C.tealDeep} /> : <MoonIcon color={C.tealDeep} />}
@@ -186,7 +186,7 @@ const createStyles = (C: Colors) => StyleSheet.create({
   container: { padding: 22, paddingBottom: 36 },
   hero: { marginBottom: 20, backgroundColor: C.surface, borderRadius: 24, padding: 22, borderWidth: 1, borderColor: C.line, overflow: "hidden", ...shadow },
   logoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  logo: { width: 52, height: 52, borderRadius: 18, backgroundColor: C.btn, alignItems: "center", justifyContent: "center" },
+  logo: { width: 52, height: 52, borderRadius: 18 },
   logoText: { color: C.onBtn, fontSize: 26, fontWeight: "800", fontFamily: fonts.head },
   schemeBtn: { width: 40, height: 40, borderRadius: 13, backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.line, alignItems: "center", justifyContent: "center" },
   safeBadge: { flex: 1, marginHorizontal: 10, alignItems: "center", backgroundColor: C.sageSoft, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: "#cfe3d4" },
