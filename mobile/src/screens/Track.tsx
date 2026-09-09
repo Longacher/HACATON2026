@@ -155,7 +155,6 @@ export default function Track({ route }: Props) {
   const [messages, setMessages] = useState<AppealMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [typing, setTyping] = useState(false);
@@ -204,7 +203,6 @@ export default function Track({ route }: Props) {
       }
       prevStatus.current = res.status;
       setData(res); setMessages(Array.isArray(res.messages) ? res.messages.slice() : []); setTrack(tn); openSocket(tn);
-      setUpdatedAt(new Date().toISOString());
     } catch { setError("Не нашли такой номер. Проверь буквы — или подожди минутку."); setData(null); } finally { setLoading(false); }
   };
   const onRefresh = async () => {
@@ -212,9 +210,8 @@ export default function Track({ route }: Props) {
     setRefreshing(true);
     try {
       const res = await apiGet<AppealDetail>(`/appeals/${encodeURIComponent(track.trim().toUpperCase())}`);
-      setData((prev: any) => (prev ? { ...res } : res));
+      setData((prev) => (prev ? { ...res } : res));
       setMessages(Array.isArray(res.messages) ? res.messages.slice() : []);
-      setUpdatedAt(new Date().toISOString());
     } catch {} finally { setRefreshing(false); }
   };
   const sendMsg = async () => {
@@ -280,6 +277,12 @@ export default function Track({ route }: Props) {
     return rows;
   }, [messages]);
 
+  // Пилюли дней — только если переписка идёт несколько дней
+  const showDays = useMemo(
+    () => new Set(chatRows.filter((r) => r.kind === "day").map((r) => r.key)).size > 1,
+    [chatRows],
+  );
+
   return (
     <SafeAreaView style={st.safe}>
       <ScrollView
@@ -306,19 +309,11 @@ export default function Track({ route }: Props) {
         {data && (
           <View style={{ marginTop: 14 }}>
             <View style={st.statusCard}>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={st.safeMini}>Анонимно · тебя не видно</Text>
-                <Pressable
-                  onPress={onRefresh} style={st.refreshBtn} hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel={updatedAt ? `Обновить, последнее обновление ${fmtDateTime(updatedAt)}` : "Обновить"}
-                >
-                  <Text style={st.refreshText}>{updatedAt ? fmtDateTime(updatedAt) : "Обновить"}</Text>
-                </Pressable>
-              </View>
+              <Text style={st.safeMini}>Анонимно · тебя не видно</Text>
               <Text style={st.statusTitle} accessibilityLiveRegion="polite">{STATUS_LABEL[data.status] || data.status}</Text>
-              <Text style={st.track}>{data.track_number}</Text>
+              {!!STAGE_HINT[data.status] && <Text style={st.stageHint}>{STAGE_HINT[data.status]}</Text>}
 
+              {timeline.length > 1 && (
               <View style={st.timeline} accessibilityRole="list">
                 {timeline.map((e, i) => (
                   <View key={`${e.at}-${i}`} style={st.tlRow} accessibilityRole="text">
@@ -333,12 +328,13 @@ export default function Track({ route }: Props) {
                   </View>
                 ))}
               </View>
-              {!!STAGE_HINT[data.status] && <Text style={st.stageHint}>{STAGE_HINT[data.status]}</Text>}
+              )}
             </View>
 
             <View style={st.chat} accessibilityRole="list">
               {chatRows.map((r) => {
                 if (r.kind === "day") {
+                  if (!showDays) return null;
                   return (
                     <View key={r.key} style={st.dayPill}>
                       <Text style={st.dayPillText}>{r.label}</Text>
@@ -349,6 +345,7 @@ export default function Track({ route }: Props) {
                 const mine = m.author_type === "applicant";
                 const author = mine ? "Ты" : "Специалист";
                 const time = fmtTime(m.created_at);
+                const meta = mine ? time : `${r.showAuthor ? `${author} · ` : ""}${time}`;
                 return (
                   <MsgBubble
                     key={r.key}
@@ -357,7 +354,7 @@ export default function Track({ route }: Props) {
                     textStyle={[mine ? st.bubbleMineText : st.bubbleTheirsText, webWrap]}
                     metaStyle={mine ? st.bubbleMineMeta : st.bubbleTheirsMeta}
                     text={m.text}
-                    meta={`${r.showAuthor ? `${author} · ` : ""}${time}`}
+                    meta={meta}
                     a11yLabel={`${author}, ${time}, ${m.text}`}
                   />
                 );
