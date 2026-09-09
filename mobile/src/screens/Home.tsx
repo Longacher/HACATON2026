@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, Animated, Easing } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../App";
@@ -11,10 +12,27 @@ import { apiGet } from "../api/client";
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
 const TRUST = [
-  { e: "✅", t: "Без имени", s: "Не просим имя, телефон, школу" },
-  { e: "✅", t: "Номер только у тебя", s: "Без него историю не найти — так задумано" },
-  { e: "✅", t: "Фото без следов", s: "Геометки и EXIF чистим автоматически" },
+  { t: "Без имени", s: "Не просим имя, телефон, школу" },
+  { t: "Номер только у тебя", s: "Без него историю не найти — так задумано" },
+  { t: "Фото без следов", s: "Геометки и EXIF чистим автоматически" },
 ];
+
+function SunIcon({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round">
+      <Circle cx="12" cy="12" r="4.5" />
+      <Path d="M12 2v2.5M12 19.5V22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2 12h2.5M19.5 12H22M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+    </Svg>
+  );
+}
+
+function MoonIcon({ color }: { color: string }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+    </Svg>
+  );
+}
 
 
 
@@ -70,9 +88,9 @@ export default function Home({ navigation }: Props) {
           <View style={st.hero}>
             <View style={st.logoRow}>
               <View style={st.logo}><Text style={st.logoText}>О</Text></View>
-              <View style={st.safeBadge}><Text style={st.safeBadgeText}>🛡️ анонимно · безопасно</Text></View>
+              <View style={st.safeBadge}><Text style={st.safeBadgeText}>Анонимно · безопасно</Text></View>
               <Pressable style={st.schemeBtn} onPress={toggle} accessibilityRole="button" accessibilityLabel={scheme === "night" ? "Включить дневной режим" : "Включить ночной режим"}>
-                <Text style={{ fontSize: 18 }}>{scheme === "night" ? "☀️" : "🌙"}</Text>
+                {scheme === "night" ? <SunIcon color={C.tealDeep} /> : <MoonIcon color={C.tealDeep} />}
               </Pressable>
             </View>
             <View style={st.breathWrap}>
@@ -86,7 +104,7 @@ export default function Home({ navigation }: Props) {
             </View>
             <Text style={st.subtitle}>Расскажи о том, что тревожит, своими словами. Профильный специалист ответит бережно и без осуждения.</Text>
             <View style={st.careCard}>
-              <Text style={st.careTitle}>💚 Ты не один(а)</Text>
+              <Text style={st.careTitle}>Ты не один(а)</Text>
               <Text style={st.careText}>Не нужно представляться. Мы не просим имя, телефон или школу. Только твоя история — и забота в ответ.</Text>
             </View>
           </View>
@@ -94,7 +112,7 @@ export default function Home({ navigation }: Props) {
 
         <FadeIn delay={120}>
           <Pressable style={st.primary} onPress={() => { tap(); navigation.navigate("Submit", {}); }} accessibilityRole="button" accessibilityLabel="Рассказать о ситуации, занять 2-3 минуты">
-            <Text style={st.primaryText}>💌 Рассказать о ситуации</Text>
+            <Text style={st.primaryText}>Рассказать о ситуации</Text>
             <Text style={st.primarySub}>займёт 2–3 минуты · можно без имени</Text>
           </Pressable>
         </FadeIn>
@@ -103,13 +121,13 @@ export default function Home({ navigation }: Props) {
           <View style={st.steps}>
             <Text style={st.stepsTitle}>Как это будет?</Text>
             {[
-              { e: "💌", t: "1. Пишешь", s: "Своими словами, можно сбивчиво. Без имени." },
-              { e: "🔑", t: "2. Получаешь номер", s: "Он только у тебя. По нему вернёшься за ответом." },
-              { e: "💚", t: "3. Приходит ответ", s: "Специалист напишет бережно, без осуждения." },
+              { n: "1", t: "Пишешь", s: "Своими словами, можно сбивчиво. Без имени." },
+              { n: "2", t: "Получаешь номер", s: "Он только у тебя. По нему вернёшься за ответом." },
+              { n: "3", t: "Приходит ответ", s: "Специалист напишет бережно, без осуждения." },
             ].map((s, i, arr) => (
               <View key={s.t} style={st.stepRow}>
                 <View style={{ alignItems: "center" }}>
-                  <View style={st.stepIcon}><Text style={{ fontSize: 18 }}>{s.e}</Text></View>
+                  <View style={st.stepIcon}><Text style={st.stepNum}>{s.n}</Text></View>
                   {i < arr.length - 1 && <View style={st.stepLine} />}
                 </View>
                 <View style={{ flex: 1, paddingBottom: i < arr.length - 1 ? 14 : 0 }}>
@@ -126,7 +144,7 @@ export default function Home({ navigation }: Props) {
             <Text style={st.stepsTitle}>Почему это безопасно?</Text>
             {TRUST.map((x) => (
               <View key={x.t} style={st.trustRow}>
-                <Text style={{ fontSize: 16 }}>{x.e}</Text>
+                <Text style={st.trustCheck}>✓</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={st.stepTitle}>{x.t}</Text>
                   <Text style={st.stepSub}>{x.s}</Text>
@@ -135,7 +153,7 @@ export default function Home({ navigation }: Props) {
             ))}
             {helped != null && helped > 0 && (
               <View style={st.counter}>
-                <Text style={st.counterText}>💚 Уже помогли: {helped}</Text>
+                <Text style={st.counterText}>Уже помогли: {helped}</Text>
               </View>
             )}
           </View>
@@ -144,7 +162,7 @@ export default function Home({ navigation }: Props) {
         {lastTrack ? (
           <FadeIn delay={400}>
             <Pressable style={st.returnCard} onPress={() => navigation.navigate("Track", { initialTrack: lastTrack })} accessibilityRole="button" accessibilityLabel={`Продолжить обращение ${lastTrack}`}>
-              <View style={st.returnDot}><Text style={{ fontSize: 16 }}>💬</Text></View>
+              <View style={st.returnDot}><Text style={st.returnNum}>№</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={st.returnTitle}>У меня уже есть номер</Text>
                 <Text style={st.returnTrack}>{lastTrack} → продолжить</Text>
@@ -157,7 +175,7 @@ export default function Home({ navigation }: Props) {
           <Text style={st.quietLinkText}>{lastTrack ? "Ввести другой номер" : "У меня уже есть номер →"}</Text>
         </Pressable>
 
-        <Text style={st.privacy}>🔒 Номер хранится только на этом устройстве.{"\n"}Дыши спокойно — мы рядом.</Text>
+        <Text style={st.privacy}>Номер хранится только на этом устройстве.{"\n"}Дыши спокойно — мы рядом.</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -190,15 +208,18 @@ const createStyles = (C: Colors) => StyleSheet.create({
   stepsTitle: { fontSize: 15, fontWeight: "800", color: C.ink, marginBottom: 14, fontFamily: fonts.bold },
   stepRow: { flexDirection: "row", gap: 12 },
   stepIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: C.sageSoft, borderWidth: 1, borderColor: "#cfe3d4", alignItems: "center", justifyContent: "center" },
+  stepNum: { fontSize: 17, fontWeight: "800", color: C.tealDeep },
   stepLine: { width: 2, flex: 1, minHeight: 14, backgroundColor: C.line, borderRadius: 2, marginVertical: 4 },
   stepTitle: { fontSize: 14.5, fontWeight: "800", color: C.ink },
   stepSub: { fontSize: 13, lineHeight: 19, color: C.muted, marginTop: 3 },
   trust: { backgroundColor: C.sageSoft, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: "#cfe3d4", marginBottom: 12 },
   trustRow: { flexDirection: "row", gap: 10, alignItems: "flex-start", marginBottom: 12 },
+  trustCheck: { fontSize: 16, fontWeight: "800", color: C.tealDeep, marginTop: 1 },
   counter: { marginTop: 2, backgroundColor: C.surface, borderRadius: 999, paddingVertical: 9, alignItems: "center", borderWidth: 1, borderColor: "#cfe3d4" },
   counterText: { color: C.tealDeep, fontWeight: "800", fontSize: 13.5 },
   returnCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.surface, borderRadius: 16, padding: 14, borderWidth: 1.5, borderColor: "#cfe3d4", marginBottom: 4 },
   returnDot: { width: 42, height: 42, borderRadius: 14, backgroundColor: C.sageSoft, alignItems: "center", justifyContent: "center" },
+  returnNum: { fontSize: 18, fontWeight: "800", color: C.tealDeep },
   returnTitle: { fontSize: 14, fontWeight: "800", color: C.ink },
   returnTrack: { fontSize: 13, color: C.tealDeep, fontWeight: "700", letterSpacing: 1, marginTop: 2 },
   returnArrow: { fontSize: 24, color: C.faint, fontWeight: "300" },
