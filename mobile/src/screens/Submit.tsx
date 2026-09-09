@@ -14,7 +14,7 @@ import { fonts, shadow, useTheme, type Colors } from "../theme";
 type Props = NativeStackScreenProps<RootStackParamList, "Submit">;
 
 const STEPS = ["Рассказ", "Детали", "Отправка"];
-const WHO_LABEL: Record<string, string> = { student: "🌱 Школьник", parent: "🤝 Родитель", teacher: "📚 Педагог" };
+const WHO_LABEL: Record<string, string> = { student: "Школьник", parent: "Родитель", teacher: "Педагог" };
 
 const CLARIFYING = [
   { key: "where", q: "Где это происходит?", options: ["В школе", "В интернете", "Дома", "Другое"] },
@@ -156,8 +156,8 @@ export default function Submit({ navigation, route }: Props) {
 
   const invalidReason: string | null =
     !catsLoaded ? "Загружаем ситуации…"
-    : mode === "pick" && cats.length > 0 && !categoryId ? "👆 Выбери ситуацию выше — без неё не отправим"
-    : useFree && textLen < 10 ? `${formal ? "Расскажите" : "Расскажи"} чуть подробнее (ещё ${10 - textLen} симв.) — так проще помочь 💚`
+    : mode === "pick" && cats.length > 0 && !categoryId ? "Выбери ситуацию выше — без неё не отправим"
+    : useFree && textLen < 10 ? `${formal ? "Расскажите" : "Расскажи"} чуть подробнее (ещё ${10 - textLen} симв.) — так проще помочь`
     : null;
 
   const pickImages = async () => {
@@ -206,7 +206,7 @@ export default function Submit({ navigation, route }: Props) {
       <ScrollView ref={scrollRef} contentContainerStyle={st.container} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {(showHelp || maybeCrisis) && (
           <View style={st.crisisBox}>
-            <Text style={st.crisisTitle}>{formal ? "🤍 Вам не обязательно оставаться одним" : "🤍 Тебе не обязательно быть одному"}</Text>
+            <Text style={st.crisisTitle}>{formal ? "Вам не обязательно оставаться одним" : "Тебе не обязательно быть одному"}</Text>
             <Text style={st.crisisLine}>Психологическая помощь: 8-800-2000-122 (бесплатно, анонимно)</Text>
             <Text style={st.crisisLine}>Служба спасения: 112 (круглосуточно)</Text>
             <Pressable onPress={() => Linking.openURL("tel:112")}><Text style={st.crisisCall}>Позвонить 112 →</Text></Pressable>
@@ -228,8 +228,8 @@ export default function Submit({ navigation, route }: Props) {
             <View style={st.card}>
               <Text style={st.label}>{formal ? "Как вам удобнее рассказать?" : "Как тебе удобнее рассказать?"}</Text>
               <View style={{ flexDirection: "row", gap: 8, marginBottom: 6 }}>
-                <Pressable onPress={() => setMode("pick")} style={[st.seg, mode === "pick" && st.segActive]}><Text style={mode === "pick" ? st.segActiveText : st.segText}>🌿 Выбрать</Text></Pressable>
-                <Pressable onPress={() => setMode("free")} style={[st.seg, mode === "free" && st.segActive]}><Text style={mode === "free" ? st.segActiveText : st.segText}>💌 Своими словами</Text></Pressable>
+                <Pressable onPress={() => setMode("pick")} style={[st.seg, mode === "pick" && st.segActive]}><Text style={mode === "pick" ? st.segActiveText : st.segText}>Выбрать</Text></Pressable>
+                <Pressable onPress={() => setMode("free")} style={[st.seg, mode === "free" && st.segActive]}><Text style={mode === "free" ? st.segActiveText : st.segText}>Своими словами</Text></Pressable>
               </View>
             </View>
             </Pop>
@@ -237,10 +237,10 @@ export default function Submit({ navigation, route }: Props) {
             <Pop delay={90}>
             {mode === "pick" ? (
               <View style={{ marginTop: 12 }}>
-                {!catsLoaded && <Text style={st.loadingText}>Загружаем ситуации… 🌱</Text>}
+                {!catsLoaded && <Text style={st.loadingText}>Загружаем ситуации…</Text>}
                 {catsLoaded && cats.length === 0 && (
                   <View style={st.offlineBox}>
-                    <Text style={st.offlineText}>Не смогли загрузить список (нет сети?) — расскажи своими словами ниже 💌</Text>
+                    <Text style={st.offlineText}>Не смогли загрузить список (нет сети?) — расскажи своими словами ниже</Text>
                   </View>
                 )}
                 {cats.map((c) => (
@@ -253,19 +253,19 @@ export default function Submit({ navigation, route }: Props) {
                       else { setCategoryId(c.id); goStep(1); }
                     }}
                   >
-                    <Text style={categoryId === c.id ? st.catActiveText : st.catText}>{c.is_free_fallback ? "💭 " : "🌱 "}{c.name}</Text>
+                    <Text style={categoryId === c.id ? st.catActiveText : st.catText}>{c.name}</Text>
                   </Pressable>
                 ))}
               </View>
             ) : (
               <>
-                {draftRestored && <Text style={st.draftNote}>💾 Вернули твой черновик — продолжай спокойно</Text>}
+                {draftRestored && <Text style={st.draftNote}>Вернули твой черновик — продолжай спокойно</Text>}
                 <TextInput style={st.freeInput} multiline placeholder={formal ? "Расскажите, как есть. Можно несвязно — мы поймём и не осудим." : "Расскажи, как есть. Можно сбивчиво — мы поймём и не осудим."} value={freeText} onChangeText={setFreeText} placeholderTextColor={C.faint} />
                 <View style={st.counterRow}>
                   <Text style={[st.counterText, textLen >= 10 && st.counterOk]}>
                     {textLen >= 10 ? "✓ достаточно, можно дальше" : `ещё ${10 - textLen} симв.`}
                   </Text>
-                  <Text style={st.draftSaved}>💾 сохраняется</Text>
+                  <Text style={st.draftSaved}>черновик сохраняется</Text>
                 </View>
               </>
             )}</Pop>
@@ -284,9 +284,9 @@ export default function Submit({ navigation, route }: Props) {
               <Text style={st.whoHint}>Подберём специалиста и тон общения — на «ты» или на «вы».</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {[
-                  { key: "student", label: "🌱 Школьник" },
-                  { key: "parent", label: "🤝 Родитель" },
-                  { key: "teacher", label: "📚 Педагог" },
+                  { key: "student", label: "Школьник" },
+                  { key: "parent", label: "Родитель" },
+                  { key: "teacher", label: "Педагог" },
                 ].map((t) => (
                   <Pressable key={t.key} onPress={() => setApplicantType(t.key)} style={[st.who, applicantType === t.key && st.whoActive]}>
                     <Text style={applicantType === t.key ? st.whoActiveText : st.whoText}>{t.label}</Text>
@@ -325,7 +325,7 @@ export default function Submit({ navigation, route }: Props) {
             {maybeCrisis && (
               <Pop delay={140}>
               <View style={st.contactCard}>
-                <Text style={st.label}>📞 Оставить способ связи?</Text>
+                <Text style={st.label}>Оставить способ связи?</Text>
                 <Text style={st.whoHint}>Необязательно. Увидит только оператор — чтобы быстрее помочь. Без галочки не сохраним.</Text>
                 <View style={{ flexDirection: "row", gap: 6, marginBottom: 8 }}>
                   {["телефон", "telegram", "email"].map((k) => (
@@ -355,7 +355,7 @@ export default function Submit({ navigation, route }: Props) {
 
             <Pop delay={180}>
             <View style={st.attachBox}>
-              <Pressable onPress={pickImages} style={st.attachBtn}><Text style={st.attachText}>📎 Добавить фото / скриншот ({picked.length}/5)</Text></Pressable>
+              <Pressable onPress={pickImages} style={st.attachBtn}><Text style={st.attachText}>Добавить фото / скриншот ({picked.length}/5)</Text></Pressable>
               {picked.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.thumbs}>
                   {picked.map((f, i) => (
@@ -388,16 +388,16 @@ export default function Submit({ navigation, route }: Props) {
               <Pressable style={st.sumRow} onPress={() => goStep(1)}><Text style={st.sumKey}>Кто</Text><Text style={st.sumVal}>{WHO_LABEL[applicantType]} ›</Text></Pressable>
               <Pressable style={st.sumRow} onPress={() => goStep(0)}>
                 <Text style={st.sumKey}>История</Text>
-                <Text style={st.sumVal}>{mode === "pick" && catName ? `🌿 ${catName} ›` : `💌 своими словами (${textLen} симв.) ›`}</Text>
+                <Text style={st.sumVal}>{mode === "pick" && catName ? `${catName} ›` : `Своими словами (${textLen} симв.) ›`}</Text>
               </Pressable>
               {useFree && textLen > 0 && <Text style={st.sumExcerpt} numberOfLines={3}>«{freeText.trim().slice(0, 140)}{textLen > 140 ? "…" : ""}»</Text>}
               <Pressable style={st.sumRow} onPress={() => goStep(1)}><Text style={st.sumKey}>Детали</Text><Text style={st.sumVal}>{answeredCount > 0 ? `${answeredCount} из 4 ›` : "пропущены ›"}</Text></Pressable>
               <Pressable style={st.sumRow} onPress={() => goStep(1)}><Text style={st.sumKey}>Фото</Text><Text style={st.sumVal}>{picked.length > 0 ? `${picked.length} из 5 ›` : "нет ›"}</Text></Pressable>
               {contactConsent && contactValue.trim() ? (
-                <Pressable style={st.sumRow} onPress={() => goStep(1)}><Text style={st.sumKey}>Связь</Text><Text style={st.sumVal}>📞 {contactKind}: {contactValue.trim()} ›</Text></Pressable>
+                <Pressable style={st.sumRow} onPress={() => goStep(1)}><Text style={st.sumKey}>Связь</Text><Text style={st.sumVal}>{contactKind}: {contactValue.trim()} ›</Text></Pressable>
               ) : null}
               {maybeCrisis && (
-                <View style={st.sumCrisis}><Text style={st.sumCrisisText}>🆘 Помечено как срочное — оператор увидит первым</Text></View>
+                <View style={st.sumCrisis}><Text style={st.sumCrisisText}>Помечено как срочное — оператор увидит первым</Text></View>
               )}
             </View>
             </Pop>
@@ -410,7 +410,7 @@ export default function Submit({ navigation, route }: Props) {
               accessibilityLabel="Отправить обращение"
               accessibilityState={{ disabled: sending || !!invalidReason }}
             >
-              {sending ? <ActivityIndicator color="#fff" /> : <Text style={st.primaryText}>Отправить с доверием 💚</Text>}
+              {sending ? <ActivityIndicator color="#fff" /> : <Text style={st.primaryText}>Отправить с доверием</Text>}
             </Pressable>
             {!!invalidReason && !sending && <Text style={st.sendHint}>{invalidReason}</Text>}
 
