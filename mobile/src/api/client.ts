@@ -1,5 +1,29 @@
 const BASE = "http://localhost:8000/api/v1";
 
+export function wsUrl(path: string): string {
+  return `${BASE.replace(/^http/, "ws")}${path}`;
+}
+
+export interface AppealMessage {
+  id?: string;
+  author_type: "applicant" | "specialist";
+  text: string;
+  created_at: string;
+}
+
+export interface AppealStatusEvent {
+  to_status: string;
+  created_at: string;
+}
+
+export interface AppealDetail {
+  track_number: string;
+  status: string;
+  created_at: string;
+  messages: AppealMessage[];
+  statuses: AppealStatusEvent[];
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
