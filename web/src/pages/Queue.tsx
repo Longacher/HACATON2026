@@ -16,6 +16,7 @@ export default function Queue() {
   const [selId, setSelId] = useState<string | null>(null);
   const [detail, setDetail] = useState<AppealFull | null>(null);
   const [hint, setHint] = useState<any>(null);
+  const [allExperts, setAllExperts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -39,6 +40,7 @@ export default function Queue() {
       setQueue(res.items); setOverdue(res.overdue_count || 0); setDenied(false);
       try { const d = await api.get<{ items: QueueItem[] }>("/operator/distributed"); setControl(d.items); } catch {}
       try { setCats(await api.get("/categories")); } catch {}
+      try { setAllExperts(await api.get<any[]>("/operator/experts")); } catch {}
     } catch (e: any) {
       if (e instanceof ApiError && e.status === 403) setDenied(true);
       else if (!silent) push("Не удалось загрузить очередь: " + e.message, "err");
@@ -49,18 +51,46 @@ export default function Queue() {
 
   const open = async (id: string) => {
     setSelId(id);
+    setHint(null);
     try {
       const d = await api.get<AppealFull>(`/operator/appeals/${id}`);
       setDetail(d); setSelCat(d.category_id || ""); setSelPri(d.priority || "standard"); setSelExp(d.expert?.id || "");
-      try { setHint(await api.get(`/operator/hint/${id}`)); } catch { setHint(null); }
     } catch (e: any) { push(e.message, "err"); }
   };
+
+  // Подсказка маршрутизации: перезапрашиваем при смене категории,
+  // чтобы список специалистов не пустел (hint зависит от категории).
+  useEffect(() => {
+    if (!selId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const qs = selCat ? `?category_id=${encodeURIComponent(selCat)}` : "";
+        const h = await api.get(`/operator/hint/${selId}${qs}`);
+        if (!cancelled) setHint(h);
+      } catch { if (!cancelled) setHint(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [selId, selCat]);
+
+  const hintExperts: any[] = useMemo(
+    () => hint?.groups?.flatMap((g: any) => g?.experts || []) || [],
+    [hint],
+  );
+  const groupLabels: string[] = useMemo(
+    () => (hint?.groups || []).map((g: any) => g?.group?.label || g?.group?.name).filter(Boolean),
+    [hint],
+  );
+  // Фолбэк: подсказки нет (нет категории/правила) — показываем всех экспертов,
+  // чтобы оператора не блокировало пустым селектом.
+  const experts: any[] = hintExperts.length ? hintExperts : allExperts;
+  const usingFallback = experts.length > 0 && hintExperts.length === 0;
 
   const act = async (action: string, extra: any = {}) => {
     if (!selId || busy) return; setBusy(true);
     try {
       await api.post(`/operator/appeals/${selId}/process`, { action, priority: extra.priority || selPri, ...extra });
-      push(action === "assign" ? "Передано специалисту 💌" : action === "reject" ? "Отклонено бережно" : "Готово", "ok");
+      push(action === "assign" ? "Передано специалисту" : action === "reject" ? "Отклонено бережно" : "Готово", "ok");
       setDetail(null); setSelId(null); load(true);
     } catch (e: any) { push(e.message, "err"); } finally { setBusy(false); }
   };
@@ -106,10 +136,9 @@ export default function Queue() {
 
   if (denied) return (
     <Shell><div className="card" style={{ padding: 40, textAlign: "center" }}>
-      <div style={{ fontSize: 44 }}>🔒</div>
       <h2 className="serif">Нужна роль оператора</h2>
       <p style={{ color: "var(--muted)" }}>Вы вошли как «{role}». API оператора требует токен оператора.<br />Добавьте аккаунт <b>op / op123</b> в один клик — переключаться можно без выхода.</p>
-      <a href="/login?add=1" className="btn-primary" style={{ display: "inline-block", textDecoration: "none", marginTop: 8 }}>＋ Добавить op</a>
+      <a href="/login?add=1" className="btn-primary" style={{ display: "inline-block", textDecoration: "none", marginTop: 8 }}>Добавить op</a>
     </div></Shell>
   );
 
@@ -118,14 +147,14 @@ export default function Queue() {
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
         <h1 className="serif" style={{ margin: 0, fontSize: 24 }}>Очередь заботы</h1>
         <span className="badge" style={{ background: "var(--teal-soft)", color: "var(--teal-deep)" }}>{queue.length} ждут · {queue.filter((x) => x.is_crisis).length} кризис</span>
-        {overdue > 0 && <span className="badge crisis-pulse" style={{ background: "var(--crisis-bg)", color: "var(--crisis)" }}>⏰ просрочено: {overdue}</span>}
+        {overdue > 0 && <span className="badge crisis-pulse" style={{ background: "var(--crisis-bg)", color: "var(--crisis)" }}>Просрочено: {overdue}</span>}
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <input ref={searchRef} className="input" placeholder="/ поиск по треку или тексту…" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 280 }} />
-          <button className="btn-ghost" onClick={() => load()}>↻</button>
+          <input ref={searchRef} className="input" placeholder="Поиск по треку или тексту…" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 280 }} />
+          <button className="btn-ghost" onClick={() => load()}>Обновить</button>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        {[["all", "💌 Все новые"], ["crisis", "🆘 Кризис"], ["returned", "↩ Возвраты"], ["complaints", "⚠ Жалобы"], ["control", "🌿 Контроль"]].map(([k, l]) => (
+        {[["all", "Все новые"], ["crisis", "Кризис"], ["returned", "Возвраты"], ["complaints", "Жалобы"], ["control", "Контроль"]].map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k as any)} className={filter === k ? "btn-primary" : "btn-ghost"} style={filter === k ? { padding: "8px 14px" } : {}}>{l}{k === "control" ? ` · ${control.length}` : ""}{k === "complaints" && unseenComplaints > 0 ? ` · ${unseenComplaints}` : ""}</button>
         ))}
       </div>
@@ -133,86 +162,105 @@ export default function Queue() {
       <div style={{ display: "grid", gridTemplateColumns: "400px 1fr", gap: 16, alignItems: "start" }}>
         <div ref={listRef} style={{ maxHeight: "calc(100vh - 220px)", overflowY: "auto", paddingRight: 2 }} className="stagger">
           {loading && <>{[0, 1, 2].map((i) => <div key={i} className="skel"><div style={{ height: 12, width: "40%", background: "#e0dcd0", borderRadius: 6, marginBottom: 8 }} /><div style={{ height: 12, width: "90%", background: "#e8e4d6", borderRadius: 6 }} /></div>)}</>}
-          {!loading && items.length === 0 && <div className="card" style={{ padding: 30, textAlign: "center", color: "var(--muted)" }}>🌱 Тихо — никто не ждёт. Так тоже хорошо.</div>}
+          {!loading && items.length === 0 && <div className="card" style={{ padding: 30, textAlign: "center", color: "var(--muted)" }}>Тихо — никто не ждёт. Так тоже хорошо.</div>}
           {items.map((it) => (
             <div key={it.id} onClick={() => open(it.id)} className={`queue-item ${selId === it.id ? "selected" : ""} ${it.is_crisis ? "crisis" : ""}`}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <b style={{ fontSize: 13 }}>{it.track_number}</b>
                 <span style={{ display: "flex", gap: 6 }}>
-                  {it.is_crisis && <span className="badge" style={{ background: "#f6d9cd", color: "#8a4a38" }}>🆘</span>}
-                  {it.has_complaint && <span className="badge" style={{ background: "#f6d9cd", color: "#8a4a38" }}>⚠ жалоба{it.complaint_seen ? "" : " · новая"}</span>}
-                  {it.status === "returned" && <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>↩</span>}
-                  {it.priority === "urgent" && <span className="badge" style={{ background: "var(--crisis-bg)", color: "var(--crisis)" }}>🔥</span>}
+                  {it.is_crisis && <span className="badge" style={{ background: "#f6d9cd", color: "#8a4a38" }}>Кризис</span>}
+                  {it.has_complaint && <span className="badge" style={{ background: "#f6d9cd", color: "#8a4a38" }}>Жалоба{it.complaint_seen ? "" : " · новая"}</span>}
+                  {it.status === "returned" && <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>Возврат</span>}
+                  {it.priority === "urgent" && <span className="badge" style={{ background: "var(--crisis-bg)", color: "var(--crisis)" }}>Срочно</span>}
                 </span>
               </div>
               <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "#4a5a5a" }}>{it.excerpt || "(своими словами)"}</div>
               <div style={{ fontSize: 11.5, color: it.is_overdue ? "var(--crisis)" : "var(--faint)", fontWeight: it.is_overdue ? 800 : 400, marginTop: 6 }}>
-                {it.is_overdue ? `⏰ ${fmtWait(it.wait_hours)} — просрочено` : fmtWait(it.wait_hours)} · {new Date(it.created_at).toLocaleString("ru")} · {it.applicant_type}
+                {it.is_overdue ? `${fmtWait(it.wait_hours)} — просрочено` : fmtWait(it.wait_hours)} · {new Date(it.created_at).toLocaleString("ru")} · {it.applicant_type}
               </div>
             </div>
           ))}
         </div>
 
         <div>
-          {!detail && <div className="card" style={{ padding: 50, textAlign: "center", color: "var(--muted)" }}><div style={{ fontSize: 44 }}>🌱</div><div className="serif" style={{ fontSize: 18, color: "var(--ink)" }}>Выберите обращение</div><div style={{ fontSize: 13 }}>j/k — листать · Esc — закрыть · кризис всегда сверху</div></div>}
+          {!detail && <div className="card" style={{ padding: 50, textAlign: "center", color: "var(--muted)" }}><div className="serif" style={{ fontSize: 18, color: "var(--ink)" }}>Выберите обращение</div><div style={{ fontSize: 13 }}>j/k — листать · Esc — закрыть · кризис всегда сверху</div></div>}
           {detail && (
             <div className="card" style={{ padding: 22 }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <span className="badge" style={{ background: "var(--teal-soft)", color: "var(--teal-deep)" }}>{detail.track_number}</span>
-                {detail.is_crisis && <span className="badge crisis-pulse" style={{ background: "var(--crisis-bg)", color: "var(--crisis)" }}>🆘 кризисное — первым</span>}
-                {detail.status === "returned" && <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>↩ {detail.return_reason || "возврат"}</span>}
+                {detail.is_crisis && <span className="badge crisis-pulse" style={{ background: "var(--crisis-bg)", color: "var(--crisis)" }}>Кризисное — первым</span>}
+                {detail.status === "returned" && <span className="badge" style={{ background: "var(--warn-bg)", color: "var(--warn)" }}>Возврат{detail.return_reason ? `: ${detail.return_reason}` : ""}</span>}
               </div>
-              <p className="serif" style={{ fontSize: 17.5, lineHeight: 1.65 }}>{detail.text}</p>
+              <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 14, padding: "14px 16px", marginTop: 12 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--faint)", marginBottom: 6 }}>Текст обращения</div>
+                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.65, color: "var(--ink)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.text || "(текст отсутствует)"}</p>
+              </div>
+              {detail.answers && Object.keys(detail.answers).length > 0 && (
+                <div style={{ background: "var(--surface-2)", border: "1px solid var(--line)", borderRadius: 14, padding: "12px 16px", marginTop: 10 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--faint)", marginBottom: 6 }}>Уточнения заявителя</div>
+                  {Object.entries(detail.answers).map(([k, v]) => (
+                    <div key={k} style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink)" }}><span style={{ color: "var(--muted)" }}>{k}: </span>{String(v)}</div>
+                  ))}
+                </div>
+              )}
               {detail.complaint && (
                 <div style={{ background: "#fdf0eb", border: "1.5px solid #e8b8a6", borderRadius: 12, padding: 12, margin: "10px 0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                    <b style={{ fontSize: 13.5, color: "#8a4a38" }}>⚠ Жалоба на специалиста (эксперт её не видит)</b>
+                    <b style={{ fontSize: 13.5, color: "#8a4a38" }}>Жалоба на специалиста (эксперт её не видит)</b>
                     {!detail.complaint.seen && <button className="btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={markComplaintSeen}>Отметить просмотренной</button>}
                   </div>
                   {detail.complaint.text && <div style={{ fontSize: 13.5, marginTop: 6 }}>«{detail.complaint.text}»</div>}
                 </div>
               )}
-              {hint && <div className="hint-box">💡 {hint.note || hint.groups?.map((g: any) => g.label).join(", ")}</div>}
+              {!selCat && <div className="hint-box">Выберите категорию — подскажем подходящих специалистов.</div>}
+              {selCat && groupLabels.length > 0 && <div className="hint-box">Подсказка системы: {groupLabels.join(", ")}</div>}
+              {selCat && hint?.note && groupLabels.length === 0 && <div className="hint-box">{hint.note}</div>}
               {((detail.attachments?.length || 0) > 0) && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, margin: "10px 0" }}>
                   {(detail.attachments || []).map((f: any, i: number) => (
-                    <a key={i} href={f.url} target="_blank" rel="noreferrer" style={{ fontSize: 13.5, color: "var(--teal-deep)", fontWeight: 600 }}>📎 {f.filename} · {Math.round((f.size_bytes || 0) / 1024)} КБ</a>
+                    <a key={i} href={f.url} target="_blank" rel="noreferrer" style={{ fontSize: 13.5, color: "var(--teal-deep)", fontWeight: 600 }}>{f.filename} · {Math.round((f.size_bytes || 0) / 1024)} КБ</a>
                   ))}
                 </div>
               )}
               {hint && (hint.all_busy || hint.no_experts) && (
                 <div style={{ background: "var(--warn-bg)", border: "1.5px solid #ead9a8", borderRadius: 12, padding: 12, margin: "10px 0", fontSize: 13.5 }}>
-                  ⚠ {hint.no_experts ? "В группах нет специалистов — обращение подсвечено администратору" : "Все специалисты перегружены — можно подождать или назначить вопреки нагрузке"}
+                  {hint.no_experts ? "В группах нет специалистов — обращение подсвечено администратору" : "Все специалисты перегружены — можно подождать или назначить вопреки нагрузке"}
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.3fr", gap: 10, marginTop: 14 }}>
                 <label style={{ fontSize: 12, fontWeight: 800 }}>Категория<select className="select" style={{ marginTop: 6 }} value={selCat} onChange={(e) => setSelCat(e.target.value)}><option value="">…</option>{cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-                <label style={{ fontSize: 12, fontWeight: 800 }}>Приоритет<select className="select" style={{ marginTop: 6 }} value={selPri} onChange={(e) => setSelPri(e.target.value)}><option value="low">🌱 Низкий</option><option value="standard">🌿 Стандарт</option><option value="urgent">🔥 Срочно</option></select></label>
-                <label style={{ fontSize: 12, fontWeight: 800 }}>Специалист<select className="select" style={{ marginTop: 6 }} value={selExp} onChange={(e) => setSelExp(e.target.value)}><option value="">Выбрать…</option>{hint?.groups?.flatMap((g: any) => g.experts).map((ex: any) => <option key={ex.id} value={ex.id}>{ex.display_name} · {ex.load}/{ex.max_active}</option>)}</select></label>
+                <label style={{ fontSize: 12, fontWeight: 800 }}>Приоритет<select className="select" style={{ marginTop: 6 }} value={selPri} onChange={(e) => setSelPri(e.target.value)}><option value="low">Низкий</option><option value="standard">Стандарт</option><option value="urgent">Срочно</option></select></label>
+                <label style={{ fontSize: 12, fontWeight: 800 }}>Специалист<select className="select" style={{ marginTop: 6 }} value={selExp} onChange={(e) => setSelExp(e.target.value)}><option value="">Выбрать…</option>{experts.map((ex: any) => <option key={ex.id} value={ex.id}>{ex.display_name} · {ex.load}/{ex.max_active}</option>)}</select></label>
               </div>
+              {selCat && usingFallback && (
+                <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 6 }}>Для этой категории правила нет — показаны все специалисты.</div>
+              )}
+              {!selCat && (
+                <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 6 }}>Категория не выбрана — показаны все специалисты.</div>
+              )}
               {(detail.transfers || []).some((t) => !t.resolved) && (
                 <div style={{ background: "var(--warn-bg)", border: "1.5px solid #ead9a8", borderRadius: 12, padding: 12, marginTop: 12 }}>
-                  <b style={{ fontSize: 13.5 }}>🔀 Запрос передачи: «{(detail.transfers || []).find((t) => !t.resolved)?.reason}»</b>
+                  <b style={{ fontSize: 13.5 }}>Запрос передачи: «{(detail.transfers || []).find((t) => !t.resolved)?.reason}»</b>
                   <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
                     <select className="select" style={{ flex: 1, minWidth: 180 }} value={selExp} onChange={(e) => setSelExp(e.target.value)}>
                       <option value="">Новый исполнитель…</option>
-                      {hint?.groups?.flatMap((g: any) => g.experts).map((ex: any) => <option key={ex.id} value={ex.id}>{ex.display_name} · {ex.load}/{ex.max_active}</option>)}
+                      {experts.map((ex: any) => <option key={ex.id} value={ex.id}>{ex.display_name} · {ex.load}/{ex.max_active}</option>)}
                     </select>
                     <button className="btn-primary" style={{ padding: "9px 14px" }} disabled={busy || !selExp} onClick={async () => {
                       if (!selId) return; setBusy(true);
-                      try { await api.post(`/operator/appeals/${selId}/transfer-resolve`, { new_expert_id: selExp }); push("Передача подтверждена 🤝", "ok"); const d = await api.get<AppealFull>(`/operator/appeals/${selId}`); setDetail(d); load(true); }
+                      try { await api.post(`/operator/appeals/${selId}/transfer-resolve`, { new_expert_id: selExp }); push("Передача подтверждена", "ok"); const d = await api.get<AppealFull>(`/operator/appeals/${selId}`); setDetail(d); load(true); }
                       catch (e: any) { push(e.message, "err"); } finally { setBusy(false); }
                     }}>Подтвердить</button>
                   </div>
                 </div>
               )}
               <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                <button className="btn-primary" disabled={busy || !selExp} onClick={() => act("assign", { expert_id: selExp, category_id: selCat || null })}>💌 Передать специалисту</button>
-                <button className="btn-ghost" onClick={() => act("close")}>✅ Ответить и закрыть</button>
+                <button className="btn-primary" disabled={busy || !selExp} onClick={() => act("assign", { expert_id: selExp, category_id: selCat || null })}>Передать специалисту</button>
+                <button className="btn-ghost" onClick={() => act("close")}>Ответить и закрыть</button>
                 <button className="btn-ghost" style={{ color: "var(--crisis)" }} onClick={() => { const r = prompt("Причина (бережно, увидит заявитель):"); if (r) act("reject", { reason: r }); }}>Отклонить</button>
                 <button className="btn-ghost" onClick={() => { setDetail(null); setSelId(null); }}>Esc · закрыть</button>
               </div>
-              {detail.contact && <div style={{ background: "var(--crisis-bg)", border: "1px solid #e8b8a6", padding: 10, borderRadius: 10, marginTop: 12, fontSize: 13 }}>📞 {detail.contact.name}: {detail.contact.value}</div>}
+              {detail.contact && <div style={{ background: "var(--crisis-bg)", border: "1px solid #e8b8a6", padding: 10, borderRadius: 10, marginTop: 12, fontSize: 13 }}>Способ связи: {detail.contact.name}: {detail.contact.value}</div>}
             </div>
           )}
         </div>

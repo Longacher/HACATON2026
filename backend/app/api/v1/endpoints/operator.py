@@ -3,7 +3,7 @@
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -22,7 +22,7 @@ from app.schemas.api import ProcessItem, RejectRequest, ReturnResolution
 from app.schemas.appeal import AppealBrief, AppealDetail
 from app.services.appeals import log_status, utcnow
 from app.services.auth import require_role
-from app.services.routing import available_experts, category_hint
+from app.services.routing import available_experts, category_hint, experts_with_load, hint_for_category
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(require_role("operator"))])
 settings = get_settings()
@@ -153,11 +153,27 @@ def complaint_seen(appeal_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @router.get("/hint/{appeal_id}")
-def hint(appeal_id: uuid.UUID, db: Session = Depends(get_db)):
+def hint(
+    appeal_id: uuid.UUID,
+    category_id: str | None = Query(default=None, description="Категория, для которой нужна подсказка (по умолчанию — из обращения)"),
+    db: Session = Depends(get_db),
+):
     a = db.get(Appeal, appeal_id)
     if not a:
         raise HTTPException(404, "Не найдено")
+    if category_id:
+        try:
+            cid = uuid.UUID(category_id)
+        except ValueError:
+            raise HTTPException(400, "Некорректная категория")
+        return hint_for_category(db, cid)
     return category_hint(db, a)
+
+
+@router.get("/experts")
+def experts(db: Session = Depends(get_db)):
+    """Все активные эксперты с нагрузкой — фолбэк, когда подсказки по категории нет."""
+    return experts_with_load(db)
 
 
 @router.get("/distributed")

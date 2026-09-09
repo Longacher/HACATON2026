@@ -23,9 +23,15 @@ def category_hint(db: Session, appeal: Appeal) -> dict | None:
     """Возвращает подсказку по правилу маршрутизации для категории обращения."""
     if not appeal.category_id:
         return None
+    return hint_for_category(db, appeal.category_id)
+
+
+def hint_for_category(db: Session, category_id) -> dict | None:
+    """Подсказка для произвольной категории (например, только что выбранной
+    оператором в карточке — обращение при этом ещё не изменено)."""
     rules = (
         db.execute(
-            select(RoutingRule).where(RoutingRule.category_id == appeal.category_id)
+            select(RoutingRule).where(RoutingRule.category_id == category_id)
         )
         .scalars()
         .all()
@@ -53,6 +59,29 @@ def category_hint(db: Session, appeal: Appeal) -> dict | None:
         "no_experts": len(all_experts) == 0,
         "all_busy": len(all_experts) > 0 and not free,
     }
+
+
+def experts_with_load(db: Session) -> list[dict]:
+    """Все активные эксперты с текущей нагрузкой (фолбэк, когда подсказки нет:
+    у обращения нет категории или правило не настроено)."""
+    rows = (
+        db.execute(
+            select(User)
+            .where(User.role == "expert", User.active.is_(True))
+            .order_by(User.display_name)
+        )
+        .scalars()
+        .all()
+    )
+    return [
+        {
+            "id": str(u.id),
+            "display_name": u.display_name or u.username,
+            "load": _current_load(db, u.id),
+            "max_active": u.max_active_appeals,
+        }
+        for u in rows
+    ]
 
 
 def _experts_in_group(db: Session, group_id) -> list[dict]:
