@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, SafeAreaView, Pressable, TextInput, ScrollView, Alert, Platform, RefreshControl, Animated, Easing } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../App";
 import { apiGet, apiPost, wsUrl, type AppealDetail, type AppealMessage } from "../api/client";
@@ -139,6 +140,30 @@ function TypingDots({ color }: { color: string }) {
   );
 }
 
+const ZWSP = "\u200B";
+
+const MIN_INPUT_H = 56;
+const MAX_INPUT_H = 140; // ~5 строк, дальше — скролл внутри поля
+
+function softWrap(text: string, every = 12): string {
+  // Рвём длинные куски без пробелов невидимыми разрывами: CSS-переносы
+  // на react-native-web для таких строк не срабатывают (пузырь разъезжается).
+  return text.split(" ").map((tok) => {
+    if (tok.length <= every) return tok;
+    let out = "";
+    for (let i = 0; i < tok.length; i += every) out += tok.slice(i, i + every) + ZWSP;
+    return out;
+  }).join(" ");
+}
+
+function SendIcon({ color }: { color: string }) {
+  return (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" style={{ transform: [{ translateX: -1.5 }] }} accessibilityLabel="Отправить">
+      <Path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z" fill={color} />
+    </Svg>
+  );
+}
+
 function askReason(cb: (reason: string) => void, fallback = "не помогло") {
   if (Platform.OS === "web") { const reason = (globalThis as any).prompt("Расскажи, чего не хватило", ""); cb(reason ?? fallback); }
   else if (Platform.OS === "android") cb(fallback); // Alert.prompt есть только на iOS
@@ -156,6 +181,7 @@ export default function Track({ route }: Props) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [draft, setDraft] = useState("");
+  const [inputHeight, setInputHeight] = useState(0);
   const [error, setError] = useState("");
   const [typing, setTyping] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -216,7 +242,7 @@ export default function Track({ route }: Props) {
   };
   const sendMsg = async () => {
     if (!draft.trim() || !data) return;
-    try { const m = await apiPost<AppealMessage>(`/appeals/${encodeURIComponent(track)}/messages`, { text: draft.trim() }); addLive(m); setDraft(""); success(); } catch {}
+    try { const m = await apiPost<AppealMessage>(`/appeals/${encodeURIComponent(track)}/messages`, { text: draft.trim() }); addLive(m); setDraft(""); setInputHeight(0); success(); } catch {}
   };
   const [score, setScore] = useState(0);
   const [fbComment, setFbComment] = useState("");
@@ -322,7 +348,7 @@ export default function Track({ route }: Props) {
                       {i < timeline.length - 1 && <View style={st.tlLine} />}
                     </View>
                     <View style={[st.tlBody, i === timeline.length - 1 && st.tlBodyNow]}>
-                      <Text style={[st.tlText, webWrap]}>{e.text}</Text>
+                      <Text style={[st.tlText, webWrap]}>{softWrap(e.text)}</Text>
                       {!!e.at && <Text style={st.tlDate}>{fmtDateTime(e.at)}</Text>}
                     </View>
                   </View>
@@ -353,7 +379,7 @@ export default function Track({ route }: Props) {
                     style={[st.bubble, mine ? st.bubbleMine : st.bubbleTheirs]}
                     textStyle={[mine ? st.bubbleMineText : st.bubbleTheirsText, webWrap]}
                     metaStyle={mine ? st.bubbleMineMeta : st.bubbleTheirsMeta}
-                    text={m.text}
+                    text={softWrap(m.text)}
                     meta={meta}
                     a11yLabel={`${author}, ${time}, ${m.text}`}
                   />
@@ -374,10 +400,31 @@ export default function Track({ route }: Props) {
             </View>
 
             {!TERMINAL_STATUSES.includes(data.status) && (
-              <>
-                <TextInput style={st.msgInput} multiline placeholder="Написать специалисту…" placeholderTextColor={C.faint} value={draft} onChangeText={setDraft} accessibilityLabel="Сообщение специалисту" />
-                <Pressable style={st.btnFull} onPress={sendMsg} accessibilityRole="button" accessibilityLabel="Отправить сообщение специалисту"><Text style={st.btnText}>Отправить</Text></Pressable>
-              </>
+              <View style={st.composerRow}>
+                <TextInput
+                  style={[st.msgInput, st.composerInput, inputHeight ? { height: Math.max(MIN_INPUT_H, Math.min(inputHeight, MAX_INPUT_H)) } : null]}
+                  multiline
+                  scrollEnabled
+                  placeholder="Написать специалисту…"
+                  placeholderTextColor={C.faint}
+                  value={draft}
+                  onChangeText={setDraft}
+                  onContentSizeChange={(e) => setInputHeight(e.nativeEvent.contentSize.height)}
+                  accessibilityLabel="Сообщение специалисту"
+                  returnKeyType="send"
+                  onSubmitEditing={sendMsg}
+                />
+                <Pressable
+                  style={[st.sendBtn, !draft.trim() && st.sendBtnDisabled]}
+                  onPress={sendMsg}
+                  disabled={!draft.trim()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Отправить сообщение специалисту"
+                  hitSlop={8}
+                >
+                  <SendIcon color={C.onBtn} />
+                </Pressable>
+              </View>
             )}
             {data.status === "answer_ready" && (
               <View style={st.rateCard}>
@@ -433,6 +480,10 @@ const createStyles = (C: Colors) => StyleSheet.create({
   label: { fontSize: 15, fontWeight: "800", marginBottom: 10, color: C.ink },
   input: { flex: 1, borderWidth: 1.5, borderColor: C.line, borderRadius: 12, padding: 13, fontSize: 15, backgroundColor: C.surface, color: C.ink, letterSpacing: 1 },
   msgInput: { borderWidth: 1.5, borderColor: C.line, borderRadius: 14, padding: 13, fontSize: 15, backgroundColor: C.surface, color: C.ink, marginTop: 10, minHeight: 56 },
+  composerRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginTop: 10 },
+  composerInput: { flex: 1, marginTop: 0, maxHeight: MAX_INPUT_H },
+  sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.btn, alignItems: "center", justifyContent: "center", ...shadow },
+  sendBtnDisabled: { opacity: 0.45 },
   btn: { backgroundColor: C.btn, paddingHorizontal: 18, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   btnFull: { backgroundColor: C.btn, padding: 15, borderRadius: 14, alignItems: "center", justifyContent: "center", marginTop: 10 },
   btnText: { color: C.onBtn, fontWeight: "800", fontSize: 15, fontFamily: fonts.bold },
