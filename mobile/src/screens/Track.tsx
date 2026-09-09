@@ -186,6 +186,13 @@ export default function Track({ route }: Props) {
   const [typing, setTyping] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const typingTimer = useRef<any>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const stickRef = useRef(false); // мотать вниз после ближайшей отрисовки контента
+  const nearBottomRef = useRef(true); // пользователь и так внизу списка
+
+  const scrollToBottom = (animated = true) => {
+    scrollRef.current?.scrollToEnd({ animated });
+  };
 
   const keyOf = (m: AppealMessage) => (m && m.id ? `id:${m.id}` : `${m?.author_type}|${m?.created_at}|${m?.text}`);
   const byTime = (a: AppealMessage, b: AppealMessage) => (Date.parse(a.created_at) || 0) - (Date.parse(b.created_at) || 0);
@@ -213,6 +220,8 @@ export default function Track({ route }: Props) {
         if (m.event !== "message") return;
         setTyping(false);
         addLive(m);
+        // читает историю выше — не дёргаем; иначе едем к новому сообщению
+        stickRef.current = nearBottomRef.current;
       } catch {}
     };
     wsRef.current = ws;
@@ -229,6 +238,7 @@ export default function Track({ route }: Props) {
       }
       prevStatus.current = res.status;
       setData(res); setMessages(Array.isArray(res.messages) ? res.messages.slice() : []); setTrack(tn); openSocket(tn);
+      stickRef.current = true; // к последнему сообщению после отрисовки
     } catch { setError("Не нашли такой номер. Проверь буквы — или подожди минутку."); setData(null); } finally { setLoading(false); }
   };
   const onRefresh = async () => {
@@ -238,11 +248,12 @@ export default function Track({ route }: Props) {
       const res = await apiGet<AppealDetail>(`/appeals/${encodeURIComponent(track.trim().toUpperCase())}`);
       setData((prev) => (prev ? { ...res } : res));
       setMessages(Array.isArray(res.messages) ? res.messages.slice() : []);
+      stickRef.current = true;
     } catch {} finally { setRefreshing(false); }
   };
   const sendMsg = async () => {
     if (!draft.trim() || !data) return;
-    try { const m = await apiPost<AppealMessage>(`/appeals/${encodeURIComponent(track)}/messages`, { text: draft.trim() }); addLive(m); setDraft(""); setInputHeight(0); success(); } catch {}
+    try { const m = await apiPost<AppealMessage>(`/appeals/${encodeURIComponent(track)}/messages`, { text: draft.trim() }); addLive(m); setDraft(""); setInputHeight(0); stickRef.current = true; success(); } catch {}
   };
   const [score, setScore] = useState(0);
   const [fbComment, setFbComment] = useState("");
@@ -312,8 +323,20 @@ export default function Track({ route }: Props) {
   return (
     <SafeAreaView style={st.safe}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={st.container}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          const { contentSize, contentOffset, layoutMeasurement } = e.nativeEvent;
+          nearBottomRef.current = contentSize.height - (contentOffset.y + layoutMeasurement.height) < 120;
+        }}
+        onContentSizeChange={() => {
+          if (stickRef.current) {
+            stickRef.current = false;
+            scrollToBottom();
+          }
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.teal} />}
       >
         <View style={st.card}>
