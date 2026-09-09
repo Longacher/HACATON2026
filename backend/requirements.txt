@@ -1,0 +1,8 @@
+# Полный набор (API + worker). Устанавливается в Docker.
+-r requirements-core.txt
+
+# Worker (ленивые импорты: только worker-контейнеру реально нужно)
+pymilvus==2.4.9
+neo4j==5.26.0
+# pymilvus 2.4.x несовместим с marshmallow 4.x (нет __version_info__)
+marshmallow==3.26.1

@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Отклик",
+    "slug": "otklik",
+    "scheme": "otklik",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain"
+    },
+    "android": {
+      "package": "ru.otklik.app"
+    },
+    "ios": {
+      "bundleIdentifier": "ru.otklik.app"
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
