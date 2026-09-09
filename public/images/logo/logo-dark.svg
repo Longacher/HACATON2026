@@ -1,0 +1,5 @@
+<svg width="154" height="40" viewBox="0 0 154 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="4" width="32" height="32" rx="9" fill="#5B5BD6"/>
+  <path d="M11 28V16.5C11 15.67 11.67 15 12.5 15S14 15.67 14 16.5V28M17 28V12.5C17 11.67 17.67 11 18.5 11S20 11.67 20 12.5V28M23 28V18.5C23 17.67 23 17 24.5 17S26 17.67 26 18.5V28" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="46" y="27" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="22" font-weight="700">Отклик</text>
+</svg>
