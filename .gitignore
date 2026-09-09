@@ -1,0 +1,12 @@
+node_modules/
+android/build/
+android/app/build/
+android/.gradle/
+ios/build/
+ios/Pods/
+*.log
+__pycache__/
+*.pyc
+dist/
+uploads/
+.DS_Store
