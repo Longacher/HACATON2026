@@ -11,31 +11,9 @@ import Track from "./src/screens/Track";
 import Result from "./src/screens/Result";
 import { ThemeProvider, useTheme } from "./src/theme";
 import { ToastProvider } from "./src/toast";
-
-export type RootStackParamList = {
-  Home: undefined;
-  Submit: { applicantType?: string };
-  Result: { trackNumber: string };
-  Track: { initialTrack?: string } | undefined;
-};
+import { linking, type RootStackParamList } from "./src/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-const linking = {
-  prefixes: ["otklik://"],
-  config: {
-    screens: {
-      Home: "",
-      Submit: "submit",
-      Result: "result",
-      Track: "track/:initialTrack",
-    },
-  },
-};
-
-export function trackLink(trackNumber: string): string {
-  return `otklik://track/${encodeURIComponent(trackNumber)}`;
-}
 
 function ThemedNav() {
   const { C, scheme } = useTheme();
@@ -84,7 +62,16 @@ export default function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <NavigationContainer linking={linking as any}>
+        <NavigationContainer
+          linking={linking as any}
+          onStateChange={() => {
+            // Web: уводим фокус из скрываемого экрана, иначе Chrome жалуется
+            // "Blocked aria-hidden..." — фокус остаётся на кнопке старого маршрута.
+            const doc = (globalThis as any).document;
+            const el = doc?.activeElement;
+            if (el && typeof el.blur === "function") el.blur();
+          }}
+        >
           <ThemedNav />
         </NavigationContainer>
       </ToastProvider>

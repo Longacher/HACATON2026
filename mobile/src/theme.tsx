@@ -1,4 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { Platform } from "react-native";
+
+// На web нет нативного Animated-модуля — все timing идут через JS-движок.
+export const NATIVE_ANIM = Platform.OS !== "web";
 
 export const palette = {
   bg: "#F6F3EC",
@@ -57,13 +61,17 @@ export const fonts = {
   head: "Nunito_800ExtraBold",
 };
 
-export const shadow = {
-  shadowColor: "#2E5F5D",
-  shadowOpacity: 0.12,
-  shadowRadius: 16,
-  shadowOffset: { width: 0, height: 8 },
-  elevation: 3,
-};
+export const shadow = Platform.select({
+  // shadow*-пропсы deprecated на web — только boxShadow
+  web: { boxShadow: "0 8px 16px rgba(46,95,93,0.12)" },
+  default: {
+    shadowColor: "#2E5F5D",
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+});
 
 type Scheme = "day" | "night";
 

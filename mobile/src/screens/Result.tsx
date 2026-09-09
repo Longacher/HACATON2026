@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, SafeAreaView, Pressable, Share, Animated, Easin
 import * as Clipboard from "expo-clipboard";
 import QRCode from "react-native-qrcode-svg";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { trackLink, type RootStackParamList } from "../../App";
-import { fonts, shadow, useTheme, type Colors } from "../theme";
+import { trackLink, type RootStackParamList } from "../navigation";
+import { fonts, NATIVE_ANIM, shadow, useTheme, type Colors } from "../theme";
 import { saveLastTrack } from "../storage";
 import { isNotifySupported, scheduleCheckReminder } from "../notify";
 
@@ -22,7 +22,7 @@ export default function Result({ navigation, route }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
-      Animated.timing(pulse, { toValue: 1, duration: 2400, easing: Easing.linear, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1, duration: 2400, easing: Easing.linear, useNativeDriver: NATIVE_ANIM }),
     );
     loop.start();
     return () => loop.stop();

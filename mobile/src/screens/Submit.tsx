@@ -2,12 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, SafeAreaView, ActivityIndicator, Alert, Linking, Platform, Image, KeyboardAvoidingView, Animated, Easing, LayoutAnimation, UIManager } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../App";
+import type { RootStackParamList } from "../navigation";
 import { apiGet, apiPost, apiUpload, type AppealRes, type Category, type UploadFile } from "../api/client";
 import { clearDraft, loadDraft, saveDraft } from "../storage";
 import { success, tap } from "../haptics";
 import { useToast } from "../toast";
-import { fonts, shadow, useTheme, type Colors } from "../theme";
+import { fonts, NATIVE_ANIM, shadow, useTheme, type Colors } from "../theme";
 
 
 
@@ -31,7 +31,7 @@ if (Platform.OS === "android" && (UIManager as any)?.setLayoutAnimationEnabledEx
 function StepPane({ dir, children }: { dir: number; children: React.ReactNode }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const a = Animated.timing(v, { toValue: 1, duration: 340, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    const a = Animated.timing(v, { toValue: 1, duration: 340, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE_ANIM });
     a.start();
     return () => a.stop();
   }, [v]);
@@ -52,7 +52,7 @@ function Pop({ delay = 0, children }: { delay?: number; children: React.ReactNod
   useEffect(() => {
     const a = Animated.timing(v, {
       toValue: 1, duration: 380, delay,
-      easing: Easing.out(Easing.back(1.15)), useNativeDriver: true,
+      easing: Easing.out(Easing.back(1.15)), useNativeDriver: NATIVE_ANIM,
     });
     a.start();
     return () => a.stop();

@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Pressable, ScrollView, SafeAreaView, Animated, 
 import Svg, { Circle, Path } from "react-native-svg";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../App";
-import { fonts, shadow, useTheme, type Colors } from "../theme";
+import type { RootStackParamList } from "../navigation";
+import { fonts, NATIVE_ANIM, shadow, useTheme, type Colors } from "../theme";
 import { getLastTrack } from "../storage";
 import { tap } from "../haptics";
 import { apiGet } from "../api/client";
@@ -39,7 +39,7 @@ function MoonIcon({ color }: { color: string }) {
 function FadeIn({ delay = 0, children }: { delay?: number; children: React.ReactNode }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const t = Animated.timing(v, { toValue: 1, duration: 550, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    const t = Animated.timing(v, { toValue: 1, duration: 550, delay, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE_ANIM });
     t.start();
     return () => t.stop();
   }, [v, delay]);
@@ -62,8 +62,8 @@ export default function Home({ navigation }: Props) {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(breath, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(breath, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(breath, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: NATIVE_ANIM }),
+        Animated.timing(breath, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: NATIVE_ANIM }),
       ])
     );
     loop.start();

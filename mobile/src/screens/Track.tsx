@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, SafeAreaView, Pressable, TextInput, ScrollView, Alert, Platform, RefreshControl, Animated, Easing } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../../App";
+import type { RootStackParamList } from "../navigation";
 import { apiGet, apiPost, wsUrl, type AppealDetail, type AppealMessage } from "../api/client";
 import { notifyAnswerReady } from "../notify";
 import { success, tap } from "../haptics";
@@ -366,7 +366,7 @@ export default function Track({ route }: Props) {
               <View style={st.timeline} accessibilityRole="list">
                 {timeline.map((e, i) => (
                   <View key={`${e.at}-${i}`} style={st.tlRow} accessibilityRole="text">
-                    <View style={st.tlRail} importantForAccessibility="no-hide-descendants">
+                    <View style={st.tlRail}>
                       <View style={[st.tlDot, i === timeline.length - 1 && st.tlDotNow]} />
                       {i < timeline.length - 1 && <View style={st.tlLine} />}
                     </View>
